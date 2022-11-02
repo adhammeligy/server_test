@@ -21,6 +21,7 @@ let thread_join_handle2 = thread::spawn(move || {
 let _res = thread_join_handle.join();
 thread_join_handle2.join().unwrap();
 
+
         // thread::spawn(move || {
         //     let (_, src_addr) = socket.recv_from(&mut buf).expect("Didn't receive data");
         //     println!("Recieved successsfully from {}",src_addr);
