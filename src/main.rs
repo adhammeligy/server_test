@@ -1,3 +1,4 @@
+// use std::fmt::format;
 use std::net::UdpSocket;
 use std::thread;
 use std::time;
@@ -6,6 +7,8 @@ use rand::Rng;
 use std::sync::{Arc, Mutex};
 use local_ip_address::local_ip;
 
+use std::fs::File;
+use std::io::prelude::*;
 
 fn main() {
 let my_local_ip = local_ip().unwrap();
@@ -25,9 +28,9 @@ let initiate_socket  = UdpSocket::bind(my_local_ip.to_string()+":2155").expect("
 
 //let sock2  = UdpSocket::bind("127.0.0.1:21545").expect("couldn't bind to address");
 //let token_main = Arc::clone(&token);
-
+let mut file = File::create("server_statistics.txt").expect("Error encountered while creating file!");
 let thread_join_handle = thread::spawn(move || {
-    handle_request(&my_server_socket);
+    handle_request(&my_server_socket, &mut file);
 });
 
 //let token_main = Arc::clone(&token);
@@ -54,14 +57,16 @@ thread_join_handle2.join().unwrap();
 thread_join_handle3.join().unwrap();
 }
 
-fn handle_request(socket : &UdpSocket)
+fn handle_request(socket : &UdpSocket, file : &mut File)
 {
     // let sec = time::Duration::from_secs(10);
     // thread::sleep(sec);
+    let mut count_requests = 0;
     loop {
         let mut buffer = [0;1000];
         let (_, src_addr) = socket.recv_from(&mut buffer).expect("Didn't receive data");
         //println!("Recieved successsfully from {}",src_addr);
+        count_requests = count_requests + 1;
         let client_reply = String::from_utf8(buffer.to_vec()).unwrap();
         println!("client sent : {}",client_reply);
         let reply = String::from("Ack");
@@ -72,6 +77,12 @@ fn handle_request(socket : &UdpSocket)
         let use_addr = reply_address.replace("7880", "7885");
         println!("{}", use_addr);
         socket.send_to(reply, &use_addr).expect("couldn't send data");
+
+        if count_requests % 1000 == 0
+        {
+            let count_str = format!("Number of requests = {}\n\n", count_requests);
+            file.write_all(count_str.as_bytes()).unwrap()
+        }
         // println!("Sent ack");
     }
 }
@@ -79,8 +90,8 @@ fn handle_request(socket : &UdpSocket)
 
 fn election(socket : &UdpSocket,gahez : &Arc<Mutex<i32>>) {
     // let my_local_ip = local_ip().unwrap();
-    let agent_list = ["192.168.8.106:7882", "192.168.8.107:7882"]; //my_local_ip.to_string()+":7882", 
-    let server_list = ["192.168.8.123:6000", "192.168.8.121:6000"]; //, "10.40..:6000" 
+    let agent_list = ["10.40.35.100:7882", "10.40.55.187:7882"]; //my_local_ip.to_string()+":7882", 
+    let server_list = ["10.40.47.17:6000", "10.40.37.119:6000"];
     //let numservers = server_list.len()+1;
     loop 
     {
@@ -172,7 +183,7 @@ fn gahzeen(socket : &UdpSocket, gahez : &Arc<Mutex<i32>>){
     loop{
         let timer = time::Duration::from_secs(15);
         let mut bufg = [0;1000];
-        let server_list = ["192.168.8.121:2155", "192.168.8.123:2155"];
+        let server_list = ["10.40.47.17:2155", "10.40.37.119:2155"];
         let mut gahez_1 = {
                     
                     let mut gahez_1 = gahez.lock().unwrap();
